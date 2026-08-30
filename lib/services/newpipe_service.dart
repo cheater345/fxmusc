@@ -50,7 +50,12 @@ class NewPipeService {
   /// video info and picking the best audio-only stream.
   static Future<String?> getPlayableUrl(String watchUrl) async {
     try {
-      final video = await VideoExtractor.getStream(watchUrl);
+      // Convert YouTube Music URLs to regular YouTube URLs for stream extraction
+      String extractUrl = watchUrl;
+      if (watchUrl.contains('music.youtube.com')) {
+        extractUrl = watchUrl.replaceFirst('music.youtube.com', 'www.youtube.com');
+      }
+      final video = await VideoExtractor.getStream(extractUrl);
       final audioStreams = video.audioOnlyStreams;
       if (audioStreams.isEmpty) {
         return null;
