@@ -67,8 +67,9 @@ class _HomeScreenState extends State<HomeScreen> {
               final res = await Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const LoginScreen()),
               );
-              if (res == true || res == false) _checkLogin();
-              if (!mounted) return;
+              if (!context.mounted) return;
+              if (res == true || res == false) await _checkLogin();
+              if (!context.mounted) return;
               if (_loggedIn) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Logged in! Subukan ulit mag-play — authenticated stream na.')),

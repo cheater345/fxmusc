@@ -40,7 +40,6 @@ class AuthService {
   static Future<bool> isLoggedIn() async {
     if (_cachedLoggedIn != null) return _cachedLoggedIn!;
     final prefs = await SharedPreferences.getInstance();
-    final loggedIn = prefs.getBool(_keyLoggedIn) ?? false;
     final cookie = prefs.getString(_keyCookie);
     if (cookie == null || cookie.isEmpty) {
       _cachedLoggedIn = false;
