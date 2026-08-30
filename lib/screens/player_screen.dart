@@ -13,7 +13,7 @@ class PlayerScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('Now Playing')),
       body: ValueListenableBuilder(
         valueListenable: controller,
-        builder: (context, _, __) {
+        builder: (context, _, _) {
           final song = controller.current;
           if (song == null) {
             return const Center(child: Text('Nothing playing'));
@@ -40,7 +40,7 @@ class PlayerScreen extends StatelessWidget {
                     width: 280,
                     height: 280,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _artworkPlaceholder(theme),
+                    errorBuilder: (_, _, _) => _artworkPlaceholder(theme),
                   )
                 : _artworkPlaceholder(theme),
           ),

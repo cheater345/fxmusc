@@ -13,7 +13,7 @@ class MiniPlayer extends StatelessWidget {
     final controller = AudioPlayerController.instance;
     return ValueListenableBuilder(
       valueListenable: controller,
-      builder: (context, _, __) {
+      builder: (context, _, _) {
         final song = controller.current;
         if (song == null) {
           return const SizedBox.shrink();
@@ -95,7 +95,7 @@ class MiniPlayer extends StatelessWidget {
         width: 44,
         height: 44,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Container(
+        errorBuilder: (_, _, _) => Container(
           width: 44,
           height: 44,
           color: theme.colorScheme.surfaceContainerHighest,

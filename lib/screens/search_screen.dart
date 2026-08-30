@@ -38,9 +38,11 @@ class _SearchScreenState extends State<SearchScreen> {
       try {
         final suggestions =
             await NewPipeService.searchSuggestions(query.trim());
-        if (mounted) setState(() => _suggestions
-          ..clear()
-          ..addAll(suggestions));
+        if (mounted) {
+          setState(() => _suggestions
+            ..clear()
+            ..addAll(suggestions));
+        }
       } catch (_) {}
     });
   }
