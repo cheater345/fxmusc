@@ -59,10 +59,15 @@ jobs:
       - name: Test
         run: flutter test
 
-      - name: Install inappwebview Gradle patch
+      - name: Patch inappwebview proguard-android.txt
         run: |
-          mkdir -p ~/.gradle/init.d
-          cp android/inappwebview-patch.gradle ~/.gradle/init.d/
+          IN_APP_WEBVIEW_GRADLE=$(find ~/.pub-cache -name "flutter_inappwebview_android*" -path "*/android/build.gradle" 2>/dev/null | head -1)
+          if [ -f "$IN_APP_WEBVIEW_GRADLE" ]; then
+            sed -i "s/getDefaultProguardFile('proguard-android.txt')/getDefaultProguardFile('proguard-android-optimize.txt')/g" "$IN_APP_WEBVIEW_GRADLE"
+            echo "Patched $IN_APP_WEBVIEW_GRADLE"
+          else
+            echo "flutter_inappwebview_android build.gradle not found, skipping patch"
+          fi
 
       - name: Build Debug APK
         if: github.event.inputs.build_type != 'appbundle'
