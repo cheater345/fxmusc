@@ -57,6 +57,8 @@ class InnertubeService {
           'clientVersion': client['clientVersion'],
           'hl': 'en',
           'gl': 'US',
+          'timeZone': 'Etc/UTC',
+          'userAgent': client['userAgent']!,
           if (visitorData != null && visitorData.isNotEmpty) 'visitorData': visitorData,
         },
       },
@@ -72,6 +74,10 @@ class InnertubeService {
       'Content-Type': 'application/json',
       'User-Agent': client['userAgent']!,
       'Origin': 'https://music.youtube.com',
+      'Referer': 'https://music.youtube.com/',
+      'X-Youtube-Utc-Offset': '0',
+      'X-Youtube-Time-Zone': 'Etc/UTC',
+      if (visitorData != null && visitorData.isNotEmpty) 'X-Goog-Visitor-Id': visitorData,
       if (cookie != null && cookie.isNotEmpty) 'Cookie': cookie,
     };
 
@@ -84,15 +90,23 @@ class InnertubeService {
     if (res.statusCode != 200) return null;
     final data = jsonDecode(res.body) as Map<String, dynamic>;
     final playability = (data['playabilityStatus'] as Map<String, dynamic>?)?['status'] as String?;
-    if (playability != 'OK') return null;
+    // ArchiveTune allows OK only; but also handle LOGIN_REQUIRED with cookie
+    if (playability != 'OK') {
+      // If login required but we have cookie, still try to parse streamingData
+      if (playability == 'LOGIN_REQUIRED' && (cookie == null || cookie.isEmpty)) return null;
+      if (playability != 'OK' && playability != 'LOGIN_REQUIRED') return null;
+    }
 
     final streamingData = data['streamingData'] as Map<String, dynamic>?;
     if (streamingData == null) return null;
 
-    final formats = (streamingData['adaptiveFormats'] as List<dynamic>? ?? [])
-        .cast<Map<String, dynamic>>();
+    // Check both formats + adaptiveFormats (some clients put audio in formats)
+    final allFormats = [
+      ...(streamingData['formats'] as List<dynamic>? ?? []),
+      ...(streamingData['adaptiveFormats'] as List<dynamic>? ?? []),
+    ].cast<Map<String, dynamic>>();
 
-    final audio = formats.where((f) {
+    final audio = allFormats.where((f) {
       final mime = f['mimeType'] as String? ?? '';
       return mime.startsWith('audio/');
     }).toList();
@@ -105,9 +119,33 @@ class InnertubeService {
       return bb.compareTo(ba);
     });
 
-    final best = audio.first;
-    final url = best['url'] as String?;
-    if (url == null || url.isEmpty) return null;
-    return url;
+    for (final best in audio) {
+      // Direct url
+      var url = best['url'] as String?;
+      if (url != null && url.isNotEmpty) return url;
+
+      // Handle cipher (ArchiveTune: signatureCipher / cipher)
+      final cipher = (best['signatureCipher'] as String?) ?? (best['cipher'] as String?);
+      if (cipher != null && cipher.isNotEmpty) {
+        // cipher is url-encoded query string: url=...&s=...&sp=...
+        // Try to extract url part; if s is present we need decipher but try url anyway
+        // Many ANDROID clients return deciphered url, so this fallback rarely needed
+        final params = Uri.splitQueryString(cipher);
+        url = params['url'];
+        if (url != null && url.isNotEmpty) {
+          // If s (signature) present, append it (basic, not deciphered - may still fail)
+          // ArchiveTune uses NewPipeUtils.getStreamUrl for proper decipher
+          final s = params['s'];
+          final sp = params['sp'] ?? 'sig';
+          if (s != null && s.isNotEmpty) {
+            final decodedUrl = Uri.decodeComponent(url);
+            // Without proper decipher, s is useless; try without
+            return decodedUrl;
+          }
+          return Uri.decodeComponent(url);
+        }
+      }
+    }
+    return null;
   }
 }
