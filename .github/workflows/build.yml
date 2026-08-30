@@ -61,21 +61,15 @@ jobs:
 
       - name: Build Debug APK
         if: github.event.inputs.build_type != 'appbundle'
-        env:
-          GRADLE_OPTS: "--init-script=android/inappwebview-patch.gradle"
-        run: flutter build apk --debug
+        run: flutter build apk --debug -- --init-script=android/inappwebview-patch.gradle
 
       - name: Build Release APK
         if: github.event.inputs.build_type == 'apk'
-        env:
-          GRADLE_OPTS: "--init-script=android/inappwebview-patch.gradle"
-        run: flutter build apk --release
+        run: flutter build apk --release -- --init-script=android/inappwebview-patch.gradle
 
       - name: Build App Bundle
         if: github.event.inputs.build_type == 'appbundle'
-        env:
-          GRADLE_OPTS: "--init-script=android/inappwebview-patch.gradle"
-        run: flutter build appbundle
+        run: flutter build appbundle -- --init-script=android/inappwebview-patch.gradle
 
       - name: Verify APK
         if: always()
