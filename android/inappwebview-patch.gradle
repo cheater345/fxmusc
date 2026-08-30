@@ -1,0 +1,18 @@
+allprojects {
+    afterEvaluate { project ->
+        if (project.name == 'flutter_inappwebview_android') {
+            def buildGradle = project.file('build.gradle')
+            if (buildGradle.exists()) {
+                def content = buildGradle.getText('UTF-8')
+                if (content.contains("getDefaultProguardFile('proguard-android.txt')")) {
+                    content = content.replace(
+                        "getDefaultProguardFile('proguard-android.txt')",
+                        "getDefaultProguardFile('proguard-android-optimize.txt')"
+                    )
+                    buildGradle.write(content, 'UTF-8')
+                    println "[inappwebview-patch] Patched proguard-android.txt -> proguard-android-optimize.txt in $buildGradle"
+                }
+            }
+        }
+    }
+}
