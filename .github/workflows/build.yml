@@ -61,12 +61,19 @@ jobs:
 
       - name: Patch inappwebview proguard-android.txt
         run: |
-          IN_APP_WEBVIEW_GRADLE=$(find "$HOME/.pub-cache" -name "flutter_inappwebview_android*" -path "*/android/build.gradle" 2>/dev/null | head -1)
+          IN_APP_WEBVIEW_GRADLE="/home/runner/.pub-cache/hosted/pub.dev/flutter_inappwebview_android-1.1.3/android/build.gradle"
           if [ -f "$IN_APP_WEBVIEW_GRADLE" ]; then
             sed -i "s/getDefaultProguardFile('proguard-android.txt')/getDefaultProguardFile('proguard-android-optimize.txt')/g" "$IN_APP_WEBVIEW_GRADLE"
             echo "Patched $IN_APP_WEBVIEW_GRADLE"
           else
-            echo "flutter_inappwebview_android build.gradle not found, skipping patch"
+            echo "flutter_inappwebview_android build.gradle not found at expected path, trying find..."
+            IN_APP_WEBVIEW_GRADLE=$(find "$HOME/.pub-cache" -name "flutter_inappwebview_android*" -path "*/android/build.gradle" 2>/dev/null | head -1)
+            if [ -f "$IN_APP_WEBVIEW_GRADLE" ]; then
+              sed -i "s/getDefaultProguardFile('proguard-android.txt')/getDefaultProguardFile('proguard-android-optimize.txt')/g" "$IN_APP_WEBVIEW_GRADLE"
+              echo "Patched $IN_APP_WEBVIEW_GRADLE"
+            else
+              echo "flutter_inappwebview_android build.gradle not found, skipping patch"
+            fi
           fi
 
       - name: Build Debug APK
