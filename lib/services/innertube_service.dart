@@ -133,13 +133,11 @@ class InnertubeService {
         final params = Uri.splitQueryString(cipher);
         url = params['url'];
         if (url != null && url.isNotEmpty) {
-          // If s (signature) present, append it (basic, not deciphered - may still fail)
-          // ArchiveTune uses NewPipeUtils.getStreamUrl for proper decipher
+          // If s (signature) present, ArchiveTune uses NewPipeUtils for decipher;
+          // without it we try decoded url anyway
           final s = params['s'];
-          final sp = params['sp'] ?? 'sig';
           if (s != null && s.isNotEmpty) {
             final decodedUrl = Uri.decodeComponent(url);
-            // Without proper decipher, s is useless; try without
             return decodedUrl;
           }
           return Uri.decodeComponent(url);
