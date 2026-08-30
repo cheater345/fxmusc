@@ -1,4 +1,5 @@
 import 'package:newpipeextractor_dart/newpipeextractor_dart.dart';
+import 'package:youtube_explode_dart/youtube_explode_dart.dart' as yt_explode;
 
 import '../models/song.dart';
 import 'auth_service.dart';
@@ -75,20 +76,43 @@ class NewPipeService {
       final cookie = await AuthService.getCookie();
       final visitorData = await AuthService.getVisitorData();
       final loggedIn = await AuthService.isLoggedIn();
-      if (!loggedIn || cookie == null) return null;
+      if (loggedIn && cookie != null) {
+        final videoId = _extractVideoId(watchUrl);
+        if (videoId.isNotEmpty) {
+          final authUrl = await InnertubeService.getAudioStreamUrl(
+            videoId,
+            cookie: cookie,
+            visitorData: visitorData,
+          );
+          if (authUrl != null && authUrl.isNotEmpty) return authUrl;
+        }
+      }
+    } catch (_) {}
 
+    // 3) Fallback: youtube_explode_dart (handles cipher, throttling, n-sig)
+    try {
       final videoId = _extractVideoId(watchUrl);
       if (videoId.isEmpty) return null;
+      final yt = yt_explode.YoutubeExplode();
+      try {
+        final manifest = await yt.videos.streamsClient.getManifest(videoId);
+        final audioOnly = manifest.audioOnly;
+        if (audioOnly.isNotEmpty) {
+          audioOnly.sort((a, b) => b.bitrate.bitsPerSecond.compareTo(a.bitrate.bitsPerSecond));
+          return audioOnly.first.url.toString();
+        }
+        // fallback to muxed if no audioOnly
+        final muxed = manifest.muxed;
+        if (muxed.isNotEmpty) {
+          muxed.sort((a, b) => b.bitrate.bitsPerSecond.compareTo(a.bitrate.bitsPerSecond));
+          return muxed.first.url.toString();
+        }
+      } finally {
+        yt.close();
+      }
+    } catch (_) {}
 
-      final authUrl = await InnertubeService.getAudioStreamUrl(
-        videoId,
-        cookie: cookie,
-        visitorData: visitorData,
-      );
-      return authUrl;
-    } catch (_) {
-      return null;
-    }
+    return null;
   }
 
   static String _extractVideoId(String url) {
