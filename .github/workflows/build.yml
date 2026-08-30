@@ -59,6 +59,11 @@ jobs:
       - name: Test
         run: flutter test
 
+      - name: Install inappwebview Gradle patch
+        run: |
+          mkdir -p ~/.gradle/init.d
+          cp android/inappwebview-patch.gradle ~/.gradle/init.d/
+
       - name: Build Debug APK
         if: github.event.inputs.build_type != 'appbundle'
         run: flutter build apk --debug
