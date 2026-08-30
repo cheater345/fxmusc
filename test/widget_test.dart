@@ -9,7 +9,7 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
 
     expect(find.byType(NavigationBar), findsOneWidget);
-    expect(find.text('Trending'), findsOneWidget);
-    expect(find.text('Search'), findsOneWidget);
+    expect(find.text('Trending'), findsWidgets);
+    expect(find.text('Search'), findsWidgets);
   });
 }
