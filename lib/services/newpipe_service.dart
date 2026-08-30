@@ -1,6 +1,8 @@
 import 'package:newpipeextractor_dart/newpipeextractor_dart.dart';
 
 import '../models/song.dart';
+import 'auth_service.dart';
+import 'innertube_service.dart';
 
 class NewPipeService {
   /// Searches YouTube Music for songs matching [query].
@@ -48,23 +50,54 @@ class NewPipeService {
 
   /// Resolves a playable audio stream URL for [song] by extracting the full
   /// video info and picking the best audio-only stream.
+  /// Original design pa rin, pero pag `no audio stream available` at naka-login,
+  /// mag-fallback sa authenticated InnerTube (gaya ng ArchiveTune backend).
   static Future<String?> getPlayableUrl(String watchUrl) async {
+    // 1) Try NewPipe (unauthenticated) - original path
     try {
-      // Convert YouTube Music URLs to regular YouTube URLs for stream extraction
       String extractUrl = watchUrl;
       if (watchUrl.contains('music.youtube.com')) {
         extractUrl = watchUrl.replaceFirst('music.youtube.com', 'www.youtube.com');
       }
       final video = await VideoExtractor.getStream(extractUrl);
       final audioStreams = video.audioOnlyStreams;
-      if (audioStreams.isEmpty) {
-        return null;
+      if (audioStreams.isNotEmpty) {
+        audioStreams.sort((a, b) => b.averageBitrate.compareTo(a.averageBitrate));
+        final url = audioStreams.first.url;
+        if (url != null && url.isNotEmpty) return url;
       }
-      audioStreams.sort((a, b) => b.averageBitrate.compareTo(a.averageBitrate));
-      return audioStreams.first.url;
-    } catch (e) {
+    } catch (_) {
+      // fallthrough to authenticated fallback
+    }
+
+    // 2) Fallback: authenticated InnerTube (requires login)
+    try {
+      final cookie = await AuthService.getCookie();
+      final visitorData = await AuthService.getVisitorData();
+      final loggedIn = await AuthService.isLoggedIn();
+      if (!loggedIn || cookie == null) return null;
+
+      final videoId = _extractVideoId(watchUrl);
+      if (videoId.isEmpty) return null;
+
+      final authUrl = await InnertubeService.getAudioStreamUrl(
+        videoId,
+        cookie: cookie,
+        visitorData: visitorData,
+      );
+      return authUrl;
+    } catch (_) {
       return null;
     }
+  }
+
+  static String _extractVideoId(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return '';
+    if (uri.queryParameters.containsKey('v')) return uri.queryParameters['v']!;
+    if (uri.pathSegments.length >= 2 && uri.pathSegments[0] == 'shorts') return uri.pathSegments[1];
+    if (uri.pathSegments.length >= 2 && uri.pathSegments[0] == 'embed') return uri.pathSegments[1];
+    return '';
   }
 
   static Song _mapItem(StreamInfoItem item) {

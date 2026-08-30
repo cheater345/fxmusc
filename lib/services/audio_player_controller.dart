@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../models/song.dart';
+import 'auth_service.dart';
 import 'newpipe_service.dart';
 
 class AudioPlayerController extends ValueNotifier<int> {
@@ -103,7 +104,12 @@ class AudioPlayerController extends ValueNotifier<int> {
     try {
       final streamUrl = await NewPipeService.getPlayableUrl(song.watchUrl);
       if (streamUrl == null) {
-        _error = 'No audio stream available for "${song.title}".';
+        final loggedIn = await AuthService.isLoggedIn();
+        if (!loggedIn) {
+          _error = 'No audio stream available for "${song.title}".\nTip: I-tap ang login icon sa Trending (taas kanan) para mag-login sa YouTube Music, tapos try ulit.';
+        } else {
+          _error = 'No audio stream available for "${song.title}".';
+        }
         _loading = false;
         notifyListeners();
         return;
